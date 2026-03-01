@@ -326,19 +326,28 @@ export default class CreateForm extends AbstractStatefulView {
     }
 
     const dateFromObj = dayjs(this._state.dateFrom);
-    const dateToObj = dayjs(this._state.dateTo);
+    let dateToObj = dayjs(this._state.dateTo);
     const price = Number(this._state.basePrice);
 
     if (!price && price !== 0) {
       return;
     }
 
+    if (!dateToObj.isAfter(dateFromObj)) {
+      dateToObj = dateFromObj.add(1, 'minute');
+    }
+
+    const selectedOfferIds = (this._state.offers || [])
+      .filter((offer) => offer.selected)
+      .map((offer) => offer.id);
+
     const pointToSubmit = {
       ...this._state,
-      destination: selectedDestination,
+      destination: selectedDestination.id,
       dateFrom: dateFromObj.toISOString(),
       dateTo: dateToObj.toISOString(),
       basePrice: price,
+      offers: selectedOfferIds,
     };
 
     this.#onSubmitButtonClick(pointToSubmit);

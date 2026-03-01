@@ -136,6 +136,11 @@ export default class EditForm extends AbstractStatefulView {
       destinationInput.addEventListener('change', this.#destinationChangeHandler);
     }
 
+    const priceInput = this.element.querySelector('#event-price-1');
+    if (priceInput) {
+      priceInput.addEventListener('change', this.#priceInputHandler);
+    }
+
     this.#initDatepickers();
   }
 
@@ -241,6 +246,13 @@ export default class EditForm extends AbstractStatefulView {
     }
   };
 
+  #priceInputHandler = (evt) => {
+    evt.preventDefault();
+    this.updateElement({
+      basePrice: evt.target.value,
+    });
+  };
+
   #closeEditButtonClickHandler = (evt) => {
     evt.preventDefault();
     this.#onCloseButtonClick();
@@ -248,7 +260,44 @@ export default class EditForm extends AbstractStatefulView {
 
   #submitButtonClickHandler = (evt) => {
     evt.preventDefault();
-    this.#onSubmitButtonClick();
+    const destinationInput = this.element.querySelector('.event__input--destination');
+    const destinationName = destinationInput ? destinationInput.value : '';
+
+    const selectedDestination = this.#destinations.find(
+      (dest) => dest.name === destinationName,
+    );
+
+    if (!selectedDestination) {
+      return;
+    }
+
+    const dateFromObj = dayjs(this._state.dateFrom);
+    let dateToObj = dayjs(this._state.dateTo);
+    const price = Number(this._state.basePrice);
+
+    if (!price && price !== 0) {
+      return;
+    }
+
+    const selectedOfferIds = (this._state.offers || [])
+      .filter((offer) => offer.selected)
+      .map((offer) => offer.id);
+
+    if (!dateToObj.isAfter(dateFromObj)) {
+      dateToObj = dateFromObj.add(1, 'minute');
+    }
+
+    const pointToSubmit = {
+      ...this._state,
+      id: this._state.id,
+      destination: selectedDestination.id,
+      dateFrom: dateFromObj.toISOString(),
+      dateTo: dateToObj.toISOString(),
+      basePrice: price,
+      offers: selectedOfferIds,
+    };
+
+    this.#onSubmitButtonClick(pointToSubmit);
   };
 
   #deleteButtonClickHandler = (evt) => {

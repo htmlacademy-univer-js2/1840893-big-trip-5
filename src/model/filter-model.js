@@ -1,4 +1,5 @@
 import Observable from '../framework/observable.js';
+import { UPDATE_TYPE } from '../constants/constants.js';
 
 export default class FilterModel extends Observable {
   #filter = 'everything';
@@ -9,6 +10,6 @@ export default class FilterModel extends Observable {
 
   set filter(filter) {
     this.#filter = filter;
-    this._notify();
+    this._notify(UPDATE_TYPE.MAJOR, this.#filter);
   }
 }

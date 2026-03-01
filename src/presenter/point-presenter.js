@@ -44,8 +44,19 @@ export default class PointPresenter {
     this.#boardItem = new BoardItem();
     render(this.#boardItem, this.#container);
 
+    const destination =
+      this.#destinationsModel.destinations.find(
+        (item) => item.id === this.#point.destination,
+      ) || {
+        id: this.#point.destination,
+        name: '',
+        description: '',
+        pictures: [],
+      };
+
     const pointWithOffers = {
       ...this.#point,
+      destination,
       offers: this.#offersModel.getOffersWithSelected(this.#point),
     };
 
@@ -58,7 +69,7 @@ export default class PointPresenter {
     this.#editFormComponent = new EditForm({
       point: pointWithOffers,
       onCloseButtonClick: this.#replaceEditToPoint,
-      onSubmitButtonClick: this.#replaceEditToPoint,
+      onSubmitButtonClick: this.#handleFormSubmit,
       onDeleteButtonClick: this.#handleDeleteClick,
       destinations: this.#destinationsModel.destinations,
       offersByType: this.#offersModel.offers,
@@ -81,8 +92,19 @@ export default class PointPresenter {
 
   updatePoint(updatedPoint) {
     this.#point = updatedPoint;
+    const destination =
+      this.#destinationsModel.destinations.find(
+        (item) => item.id === this.#point.destination,
+      ) || {
+        id: this.#point.destination,
+        name: '',
+        description: '',
+        pictures: [],
+      };
+
     const pointWithOffers = {
       ...this.#point,
+      destination,
       offers: this.#offersModel.getOffersWithSelected(this.#point),
     };
 
@@ -121,17 +143,11 @@ export default class PointPresenter {
       isFavorite: !this.#point.isFavorite,
     };
 
-    this.#onDataChange(
-      USER_ACTION.UPDATE_POINT,
-      updatedPoint,
-    );
+    this.#onDataChange(USER_ACTION.UPDATE_POINT, updatedPoint);
   };
 
   #handleDeleteClick = () => {
-    this.#onDataChange(
-      USER_ACTION.DELETE_POINT,
-      this.#point,
-    );
+    this.#onDataChange(USER_ACTION.DELETE_POINT, this.#point);
   };
 
   #handleFormSubmit = (updatedPoint) => {

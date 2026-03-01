@@ -12,6 +12,7 @@ export default class FilterPresenter {
     this.#pointsModel = pointsModel;
     this.#filterModel = filterModel;
     this.#pointsModel.addObserver(this.#handleModelChange);
+    this.#filterModel.addObserver(this.#handleModelChange);
   }
 
   init() {

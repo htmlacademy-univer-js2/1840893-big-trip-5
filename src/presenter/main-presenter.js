@@ -1,7 +1,6 @@
 import ListPresenter from './list-presenter.js';
 import TripInfo from '../view/trip-info.js';
 import { render, RenderPosition } from '../framework/render.js';
-import dayjs from 'dayjs';
 import CreateForm from '../view/form-create.js';
 
 export default class MainPresenter {
@@ -41,19 +40,16 @@ export default class MainPresenter {
     this.#newEventButton = document.querySelector('.trip-main__event-add-btn');
     this.#newEventButton.addEventListener('click', this.#handleNewEventClick);
 
-    /* Points List */
-    const filteredPoints = this.#getPoints();
-    const currentFilter = this.#filterModel.filter;
-
     this.#listPresenter = new ListPresenter({
       boardContainer: this.#boardContainer,
       pointsModel: this.#pointsModel,
       destinationsModel: this.#destinationsModel,
       offersModel: this.#offersModel,
+      filterModel: this.#filterModel,
       onCloseCreateForm: () => this.closeCreateForm(),
     });
 
-    this.#listPresenter.init(filteredPoints, currentFilter);
+    this.#listPresenter.init();
   }
 
   closeCreateForm() {
@@ -107,37 +103,6 @@ export default class MainPresenter {
 
   #handleModelChange = () => {
     this.#listPresenter.resetSort();
-    const filteredPoints = this.#getPoints();
-    const currentFilter = this.#filterModel.filter;
-    this.#listPresenter.init(filteredPoints, currentFilter);
+    this.#listPresenter.init();
   };
-
-  #filterPoints(points, filterType) {
-    const now = dayjs();
-
-    switch (filterType) {
-      case 'future':
-        return points.filter((point) => dayjs(point.dateFrom).isAfter(now));
-
-      case 'present':
-        return points.filter(
-          (point) =>
-            dayjs(point.dateFrom).isBefore(now) &&
-            dayjs(point.dateTo).isAfter(now),
-        );
-
-      case 'past':
-        return points.filter((point) => dayjs(point.dateTo).isBefore(now));
-
-      case 'everything':
-      default:
-        return [...points];
-    }
-  }
-
-  #getPoints() {
-    const points = this.#pointsModel.points;
-    const filterType = this.#filterModel.filter;
-    return this.#filterPoints(points, filterType);
-  }
 }

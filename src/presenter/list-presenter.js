@@ -3,7 +3,11 @@ import Board from '../view/board.js';
 import Message from '../view/message.js';
 import PointPresenter from './point-presenter.js';
 import { render, RenderPosition } from '../framework/render.js';
-import { MESSAGE_FOR_EMPTY_LIST, USER_ACTION } from '../constants/constants.js';
+import {
+  MESSAGE_FOR_EMPTY_LIST,
+  USER_ACTION,
+  UPDATE_TYPE,
+} from '../constants/constants.js';
 import dayjs from 'dayjs';
 
 export default class ListPresenter {
@@ -13,17 +17,24 @@ export default class ListPresenter {
   #pointsModel = null;
   #destinationsModel = null;
   #offersModel = null;
+  #filterModel = null;
   #pointPresenters = new Map();
   #currentSortType = 'Day';
-  #points = [];
-  #currentFilter = 'everything';
   #onCloseCreateForm = null;
 
-  constructor({ boardContainer, pointsModel, destinationsModel, offersModel, onCloseCreateForm }) {
+  constructor({
+    boardContainer,
+    pointsModel,
+    destinationsModel,
+    offersModel,
+    filterModel,
+    onCloseCreateForm,
+  }) {
     this.#boardContainer = boardContainer;
     this.#pointsModel = pointsModel;
     this.#destinationsModel = destinationsModel;
     this.#offersModel = offersModel;
+    this.#filterModel = filterModel;
     this.#onCloseCreateForm = onCloseCreateForm;
 
     this.#pointsModel.addObserver(this.#handleModelChange);
@@ -42,10 +53,8 @@ export default class ListPresenter {
     }
   }
 
-  init(points, filterType) {
-    this.#points = [...points];
+  init() {
     this.#currentSortType = 'Day';
-    this.#currentFilter = filterType;
 
     this.#boardContainer.innerHTML = '';
 
@@ -55,7 +64,8 @@ export default class ListPresenter {
 
     this.#renderSort();
 
-    const sortedPoints = this.#sortPoints(this.#points, this.#currentSortType);
+    const points = this.#getPoints();
+    const sortedPoints = this.#sortPoints(points, this.#currentSortType);
     this.#renderPoints(sortedPoints);
   }
 
@@ -72,7 +82,8 @@ export default class ListPresenter {
           this.#pointPresenters.forEach((presenter) => presenter.destroy());
           this.#pointPresenters.clear();
 
-          const sortedPoints = this.#sortPoints(this.#points, sortType);
+          const points = this.#getPoints();
+          const sortedPoints = this.#sortPoints(points, sortType);
           this.#renderPoints(sortedPoints);
         }
       },
@@ -91,7 +102,7 @@ export default class ListPresenter {
     this.#boardComponent.element.innerHTML = '';
 
     if (points.length === 0) {
-      const message = MESSAGE_FOR_EMPTY_LIST[this.#currentFilter];
+      const message = MESSAGE_FOR_EMPTY_LIST[this.#filterModel.filter];
       const messageComponent = new Message({ message });
       render(messageComponent, this.#boardComponent.element);
       return;
@@ -118,13 +129,13 @@ export default class ListPresenter {
       onDataChange: (actionType, updatedPoint) => {
         switch (actionType) {
           case USER_ACTION.UPDATE_POINT:
-            this.#pointsModel.updatePoint(updatedPoint);
+            this.#pointsModel.updatePoint(UPDATE_TYPE.PATCH, updatedPoint);
             break;
           case USER_ACTION.DELETE_POINT:
-            this.#pointsModel.deletePoint(updatedPoint);
+            this.#pointsModel.deletePoint(UPDATE_TYPE.MINOR, updatedPoint);
             break;
           case USER_ACTION.ADD_POINT:
-            this.#pointsModel.addPoint(updatedPoint);
+            this.#pointsModel.addPoint(UPDATE_TYPE.MINOR, updatedPoint);
             break;
         }
       },
@@ -158,14 +169,53 @@ export default class ListPresenter {
     return sortedPoints;
   }
 
-  #handleModelChange = () => {
-    this.#pointPresenters.forEach((presenter) => presenter.destroy());
-    this.#pointPresenters.clear();
-
+  #getPoints() {
     const points = this.#pointsModel.points;
-    this.#points = [...points];
+    const now = dayjs();
+    const filterType = this.#filterModel.filter;
 
-    const sortedPoints = this.#sortPoints(this.#points, this.#currentSortType);
-    this.#renderPoints(sortedPoints);
+    switch (filterType) {
+      case 'future':
+        return points.filter((point) => dayjs(point.dateFrom).isAfter(now));
+
+      case 'present':
+        return points.filter(
+          (point) =>
+            dayjs(point.dateFrom).isBefore(now) &&
+            dayjs(point.dateTo).isAfter(now),
+        );
+
+      case 'past':
+        return points.filter((point) => dayjs(point.dateTo).isBefore(now));
+
+      case 'everything':
+      default:
+        return [...points];
+    }
+  }
+
+  #handleModelChange = (updateType, data) => {
+    switch (updateType) {
+      case UPDATE_TYPE.PATCH: {
+        const presenter = this.#pointPresenters.get(data.id);
+        if (presenter) {
+          presenter.updatePoint(data);
+        }
+        break;
+      }
+      case UPDATE_TYPE.MINOR: {
+        this.#pointPresenters.forEach((presenter) => presenter.destroy());
+        this.#pointPresenters.clear();
+
+        const points = this.#getPoints();
+        const sortedPoints = this.#sortPoints(points, this.#currentSortType);
+        this.#renderPoints(sortedPoints);
+        break;
+      }
+      case UPDATE_TYPE.MAJOR:
+      case UPDATE_TYPE.INIT:
+        this.init();
+        break;
+    }
   };
 }
