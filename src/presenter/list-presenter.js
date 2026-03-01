@@ -21,6 +21,7 @@ export default class ListPresenter {
   #pointPresenters = new Map();
   #currentSortType = 'Day';
   #onCloseCreateForm = null;
+  #uiBlocker = null;
 
   constructor({
     boardContainer,
@@ -28,6 +29,7 @@ export default class ListPresenter {
     destinationsModel,
     offersModel,
     filterModel,
+    uiBlocker,
     onCloseCreateForm,
   }) {
     this.#boardContainer = boardContainer;
@@ -35,6 +37,7 @@ export default class ListPresenter {
     this.#destinationsModel = destinationsModel;
     this.#offersModel = offersModel;
     this.#filterModel = filterModel;
+    this.#uiBlocker = uiBlocker;
     this.#onCloseCreateForm = onCloseCreateForm;
 
     this.#pointsModel.addObserver(this.#handleModelChange);
@@ -120,22 +123,23 @@ export default class ListPresenter {
       pointsModel: this.#pointsModel,
       destinationsModel: this.#destinationsModel,
       offersModel: this.#offersModel,
+      uiBlocker: this.#uiBlocker,
       onViewChange: () => {
         this.#pointPresenters.forEach((presenter) => presenter.resetView());
         if (this.#onCloseCreateForm) {
           this.#onCloseCreateForm();
         }
       },
-      onDataChange: (actionType, updatedPoint) => {
+      onDataChange: async (actionType, updatedPoint) => {
         switch (actionType) {
           case USER_ACTION.UPDATE_POINT:
-            this.#pointsModel.updatePoint(UPDATE_TYPE.PATCH, updatedPoint);
+            await this.#pointsModel.updatePoint(UPDATE_TYPE.PATCH, updatedPoint);
             break;
           case USER_ACTION.DELETE_POINT:
-            this.#pointsModel.deletePoint(UPDATE_TYPE.MINOR, updatedPoint);
+            await this.#pointsModel.deletePoint(UPDATE_TYPE.MINOR, updatedPoint);
             break;
           case USER_ACTION.ADD_POINT:
-            this.#pointsModel.addPoint(UPDATE_TYPE.MINOR, updatedPoint);
+            await this.#pointsModel.addPoint(UPDATE_TYPE.MINOR, updatedPoint);
             break;
         }
       },

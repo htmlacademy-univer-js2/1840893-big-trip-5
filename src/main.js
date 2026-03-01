@@ -6,12 +6,15 @@ import FilterModel from './model/filter-model.js';
 import FilterPresenter from './presenter/filter-presenter.js';
 import MainPresenter from './presenter/main-presenter.js';
 import Message from './view/message.js';
+import UiBlocker from './framework/ui-blocker/ui-blocker.js';
 import { render } from './framework/render.js';
 import {
   AUTHORIZATION,
   END_POINT,
   LOADING_MESSAGE,
 } from './constants/constants.js';
+
+const uiBlocker = new UiBlocker({ lowerLimit: 100, upperLimit: 800 });
 
 const apiClient = new ApiClient(END_POINT, AUTHORIZATION);
 
@@ -44,6 +47,7 @@ const mainPresenter = new MainPresenter({
   destinationsModel,
   offersModel,
   filterModel,
+  uiBlocker,
 });
 
 newEventButton.disabled = true;

@@ -17,6 +17,7 @@ export default class PointPresenter {
   #onViewChange = null;
   #onDataChange = null;
   #isEditing = false;
+  #uiBlocker = null;
 
   constructor({
     container,
@@ -24,6 +25,7 @@ export default class PointPresenter {
     pointsModel,
     destinationsModel,
     offersModel,
+    uiBlocker,
     onViewChange,
     onDataChange,
   }) {
@@ -32,6 +34,7 @@ export default class PointPresenter {
     this.#pointsModel = pointsModel;
     this.#destinationsModel = destinationsModel;
     this.#offersModel = offersModel;
+    this.#uiBlocker = uiBlocker;
     this.#onViewChange = onViewChange;
     this.#onDataChange = onDataChange;
   }
@@ -137,22 +140,45 @@ export default class PointPresenter {
     }
   }
 
-  #toggleFavorite = () => {
+  #toggleFavorite = async () => {
     const updatedPoint = {
       ...this.#point,
       isFavorite: !this.#point.isFavorite,
     };
 
-    this.#onDataChange(USER_ACTION.UPDATE_POINT, updatedPoint);
+    this.#uiBlocker.block();
+    try {
+      await this.#onDataChange(USER_ACTION.UPDATE_POINT, updatedPoint);
+    } finally {
+      this.#uiBlocker.unblock();
+    }
   };
 
-  #handleDeleteClick = () => {
-    this.#onDataChange(USER_ACTION.DELETE_POINT, this.#point);
+  #handleDeleteClick = async () => {
+    this.#uiBlocker.block();
+    this.#editFormComponent.setDeleting(true);
+    try {
+      await this.#onDataChange(USER_ACTION.DELETE_POINT, this.#point);
+    } catch {
+      this.#editFormComponent?.shake();
+    } finally {
+      this.#editFormComponent?.setDeleting(false);
+      this.#uiBlocker.unblock();
+    }
   };
 
-  #handleFormSubmit = (updatedPoint) => {
-    this.#onDataChange(USER_ACTION.UPDATE_POINT, updatedPoint);
-    this.#replaceEditToPoint();
+  #handleFormSubmit = async (updatedPoint) => {
+    this.#uiBlocker.block();
+    this.#editFormComponent.setSaving(true);
+    try {
+      await this.#onDataChange(USER_ACTION.UPDATE_POINT, updatedPoint);
+      this.#replaceEditToPoint();
+    } catch {
+      this.#editFormComponent?.shake();
+    } finally {
+      this.#editFormComponent?.setSaving(false);
+      this.#uiBlocker.unblock();
+    }
   };
 
   #replacePointToEdit = () => {
