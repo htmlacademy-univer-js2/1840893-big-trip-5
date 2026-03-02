@@ -66,7 +66,7 @@ function createFormCreateTemplate(point, destinations) {
             type="text"
             name="event-destination"
             value="${he.encode(destination.name)}"
-            list="destination-list-1" required
+            list="destination-list-1"
             ${isDisabled ? 'disabled' : ''}
           >
 
@@ -183,11 +183,6 @@ export default class CreateForm extends AbstractStatefulView {
 
   setSaving(value) {
     this.updateElement({ isSaving: value });
-  }
-
-  shake() {
-    this.element.classList.add('shake');
-    setTimeout(() => this.element.classList.remove('shake'), 600);
   }
 
   get template() {
