@@ -17,6 +17,7 @@ export default class PointPresenter {
   #onViewChange = null;
   #onDataChange = null;
   #isEditing = false;
+  #uiBlocker = null;
 
   constructor({
     container,
@@ -24,6 +25,7 @@ export default class PointPresenter {
     pointsModel,
     destinationsModel,
     offersModel,
+    uiBlocker,
     onViewChange,
     onDataChange,
   }) {
@@ -32,6 +34,7 @@ export default class PointPresenter {
     this.#pointsModel = pointsModel;
     this.#destinationsModel = destinationsModel;
     this.#offersModel = offersModel;
+    this.#uiBlocker = uiBlocker;
     this.#onViewChange = onViewChange;
     this.#onDataChange = onDataChange;
   }
@@ -84,6 +87,7 @@ export default class PointPresenter {
       this.#boardItem = null;
     }
 
+    this.#isEditing = false;
     this.#pointComponent = null;
     this.#editFormComponent = null;
 
@@ -115,20 +119,11 @@ export default class PointPresenter {
     });
 
     if (this.#isEditing) {
-      this.#editFormComponent = new EditForm({
-        point: pointWithOffers,
-        onCloseButtonClick: this.#replaceEditToPoint,
-        onSubmitButtonClick: this.#handleFormSubmit,
-        onDeleteButtonClick: this.#handleDeleteClick,
-        destinations: this.#destinationsModel.destinations,
-        offersByType: this.#offersModel.offers,
-      });
-      replace(this.#editFormComponent, this.#pointComponent);
+      this.#pointComponent = newPointComponent;
     } else {
       replace(newPointComponent, this.#pointComponent);
+      this.#pointComponent = newPointComponent;
     }
-
-    this.#pointComponent = newPointComponent;
   }
 
   resetView() {
@@ -137,22 +132,52 @@ export default class PointPresenter {
     }
   }
 
-  #toggleFavorite = () => {
+  #toggleFavorite = async () => {
     const updatedPoint = {
       ...this.#point,
       isFavorite: !this.#point.isFavorite,
     };
 
-    this.#onDataChange(USER_ACTION.UPDATE_POINT, updatedPoint);
+    this.#uiBlocker.block();
+    try {
+      await this.#onDataChange(USER_ACTION.UPDATE_POINT, updatedPoint);
+    } catch {
+      this.#pointComponent.shake();
+    } finally {
+      this.#uiBlocker.unblock();
+    }
   };
 
-  #handleDeleteClick = () => {
-    this.#onDataChange(USER_ACTION.DELETE_POINT, this.#point);
+  #handleDeleteClick = async () => {
+    this.#uiBlocker.block();
+    this.#editFormComponent.setDeleting(true);
+    try {
+      await this.#onDataChange(USER_ACTION.DELETE_POINT, this.#point);
+    } catch {
+      this.#editFormComponent?.shake(() => {
+        this.#editFormComponent?.setDeleting(false);
+      });
+      return;
+    } finally {
+      this.#uiBlocker.unblock();
+    }
   };
 
-  #handleFormSubmit = (updatedPoint) => {
-    this.#onDataChange(USER_ACTION.UPDATE_POINT, updatedPoint);
-    this.#replaceEditToPoint();
+  #handleFormSubmit = async (updatedPoint) => {
+    this.#uiBlocker.block();
+    this.#editFormComponent.setSaving(true);
+    try {
+      await this.#onDataChange(USER_ACTION.UPDATE_POINT, updatedPoint);
+      this.#editFormComponent.setSaving(false);
+      this.#replaceEditToPoint();
+    } catch {
+      this.#editFormComponent?.shake(() => {
+        this.#editFormComponent?.setSaving(false);
+      });
+      return;
+    } finally {
+      this.#uiBlocker.unblock();
+    }
   };
 
   #replacePointToEdit = () => {

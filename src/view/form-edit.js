@@ -8,11 +8,15 @@ import 'flatpickr/dist/flatpickr.min.css';
 import he from 'he';
 
 function createFormEditTemplate(point, destinations) {
-  const { type, destination, basePrice, dateFrom, dateTo, offers = [] } = point;
+  const { type, destination, basePrice, dateFrom, dateTo, offers = [], isSaving = false, isDeleting = false } = point;
   const { description, pictures = [] } = destination;
+  const isDisabled = isSaving || isDeleting;
 
   const formattedDateFrom = dayjs(dateFrom).format('DD/MM/YY HH:mm');
   const formattedDateTo = dayjs(dateTo).format('DD/MM/YY HH:mm');
+
+  const saveButtonText = isSaving ? 'Saving...' : 'Save';
+  const deleteButtonText = isDeleting ? 'Deleting...' : 'Delete';
 
   return `
     <form class="event event--edit" action="#" method="post">
@@ -22,7 +26,7 @@ function createFormEditTemplate(point, destinations) {
             <span class="visually-hidden">Choose event type</span>
             <img class="event__type-icon" width="17" height="17" src="img/icons/${type}.png" alt="Event type icon">
           </label>
-          <input class="event__type-toggle visually-hidden" id="event-type-toggle-1" type="checkbox">
+          <input class="event__type-toggle visually-hidden" id="event-type-toggle-1" type="checkbox" ${isDisabled ? 'disabled' : ''}>
           <div class="event__type-list">
             ${new Transport().template}
           </div>
@@ -32,7 +36,7 @@ function createFormEditTemplate(point, destinations) {
           <label class="event__label event__type-output" for="event-destination-1">
             ${type.charAt(0).toUpperCase() + type.slice(1)}
           </label>
-          <input class="event__input event__input--destination" id="event-destination-1" type="text" name="event-destination" value="${he.encode(destination.name)}" list="destination-list-1">
+          <input class="event__input event__input--destination" id="event-destination-1" type="text" name="event-destination" value="${he.encode(destination.name)}" list="destination-list-1" ${isDisabled ? 'disabled' : ''}>
           <datalist id="destination-list-1">
             ${destinations?.map((dest) => `
               <option value="${he.encode(dest.name)}"></option>
@@ -42,10 +46,10 @@ function createFormEditTemplate(point, destinations) {
 
         <div class="event__field-group event__field-group--time">
           <label class="visually-hidden" for="event-start-time-1">From</label>
-          <input class="event__input event__input--time" id="event-start-time-1" type="text" name="event-start-time" value="${formattedDateFrom}">
+          <input class="event__input event__input--time" id="event-start-time-1" type="text" name="event-start-time" value="${formattedDateFrom}" ${isDisabled ? 'disabled' : ''}>
           &mdash;
           <label class="visually-hidden" for="event-end-time-1">To</label>
-          <input class="event__input event__input--time" id="event-end-time-1" type="text" name="event-end-time" value="${formattedDateTo}">
+          <input class="event__input event__input--time" id="event-end-time-1" type="text" name="event-end-time" value="${formattedDateTo}" ${isDisabled ? 'disabled' : ''}>
         </div>
 
         <div class="event__field-group event__field-group--price">
@@ -53,11 +57,11 @@ function createFormEditTemplate(point, destinations) {
             <span class="visually-hidden">Price</span>
             &euro;
           </label>
-          <input class="event__input event__input--price" id="event-price-1" type="number" min="0" name="event-price" value="${basePrice}">
+          <input class="event__input event__input--price" id="event-price-1" type="number" min="0" name="event-price" value="${basePrice}" ${isDisabled ? 'disabled' : ''}>
         </div>
 
-        <button class="event__save-btn btn btn--blue" type="submit">Save</button>
-        <button class="event__reset-btn" type="reset">Delete</button>
+        <button class="event__save-btn btn btn--blue" type="submit" ${isDisabled ? 'disabled' : ''}>${saveButtonText}</button>
+        <button class="event__reset-btn" type="reset" ${isDisabled ? 'disabled' : ''}>${deleteButtonText}</button>
         <button class="event__rollup-btn" type="button">
           <span class="visually-hidden">Open event</span>
         </button>
@@ -104,8 +108,16 @@ export default class EditForm extends AbstractStatefulView {
     this.#onDeleteButtonClick = onDeleteButtonClick;
     this.#destinations = destinations;
     this.#offersByType = offersByType;
-    this._setState(getInitialPointState(point));
+    this._setState({ ...getInitialPointState(point), isSaving: false, isDeleting: false });
     this._restoreHandlers();
+  }
+
+  setSaving(value) {
+    this.updateElement({ isSaving: value });
+  }
+
+  setDeleting(value) {
+    this.updateElement({ isDeleting: value });
   }
 
   get template() {
@@ -248,7 +260,7 @@ export default class EditForm extends AbstractStatefulView {
 
   #priceInputHandler = (evt) => {
     evt.preventDefault();
-    this.updateElement({
+    this._setState({
       basePrice: evt.target.value,
     });
   };
@@ -268,14 +280,18 @@ export default class EditForm extends AbstractStatefulView {
     );
 
     if (!selectedDestination) {
+      this.shake();
       return;
     }
 
     const dateFromObj = dayjs(this._state.dateFrom);
     let dateToObj = dayjs(this._state.dateTo);
-    const price = Number(this._state.basePrice);
 
-    if (!price && price !== 0) {
+    const priceInput = this.element.querySelector('#event-price-1');
+    const price = Number(priceInput ? priceInput.value : this._state.basePrice);
+
+    if (price <= 0 || price > 100000) {
+      this.shake();
       return;
     }
 

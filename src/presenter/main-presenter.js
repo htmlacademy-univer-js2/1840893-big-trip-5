@@ -2,6 +2,7 @@ import ListPresenter from './list-presenter.js';
 import TripInfo from '../view/trip-info.js';
 import { render, RenderPosition } from '../framework/render.js';
 import CreateForm from '../view/form-create.js';
+import { UPDATE_TYPE } from '../constants/constants.js';
 
 export default class MainPresenter {
   #boardContainer = null;
@@ -13,6 +14,7 @@ export default class MainPresenter {
   #filterModel = null;
   #createFormComponent = null;
   #newEventButton = null;
+  #uiBlocker = null;
 
   constructor({
     boardContainer,
@@ -21,6 +23,7 @@ export default class MainPresenter {
     destinationsModel,
     offersModel,
     filterModel,
+    uiBlocker,
   }) {
     this.#boardContainer = boardContainer;
     this.#headerContainer = headerContainer;
@@ -28,6 +31,7 @@ export default class MainPresenter {
     this.#destinationsModel = destinationsModel;
     this.#offersModel = offersModel;
     this.#filterModel = filterModel;
+    this.#uiBlocker = uiBlocker;
 
     this.#filterModel.addObserver(this.#handleModelChange);
   }
@@ -46,6 +50,7 @@ export default class MainPresenter {
       destinationsModel: this.#destinationsModel,
       offersModel: this.#offersModel,
       filterModel: this.#filterModel,
+      uiBlocker: this.#uiBlocker,
       onCloseCreateForm: () => this.closeCreateForm(),
     });
 
@@ -57,6 +62,7 @@ export default class MainPresenter {
       this.#createFormComponent.element.remove();
       this.#createFormComponent = null;
       this.#newEventButton.disabled = false;
+      this.#listPresenter.setViewState({ isCreating: false });
     }
   }
 
@@ -87,9 +93,23 @@ export default class MainPresenter {
     this.#newEventButton.disabled = true;
   };
 
-  #handleCreateSubmit = (point) => {
-    this.#pointsModel.addPoint(point);
-    this.#handleCreateCancel();
+  #handleCreateSubmit = async (point) => {
+    this.#uiBlocker.block();
+    this.#createFormComponent.setSaving(true);
+    try {
+      await this.#pointsModel.addPoint(UPDATE_TYPE.MINOR, point);
+      this.closeCreateForm();
+    } catch {
+      if (this.#createFormComponent) {
+        this.#createFormComponent.shake(() => {
+          this.#createFormComponent?.setSaving(false);
+        });
+      }
+      this.#uiBlocker.unblock();
+      return;
+    } finally {
+      this.#uiBlocker.unblock();
+    }
   };
 
   #handleCreateCancel = () => {

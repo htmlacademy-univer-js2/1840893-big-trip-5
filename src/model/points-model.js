@@ -40,14 +40,16 @@ export default class PointsModel extends Observable {
     }
   }
 
-  addPoint(updateType, point) {
-    this.#points = [point, ...this.#points];
-    this._notify(updateType, point);
+  async addPoint(updateType, point) {
+    const createdPoint = await this.#pointsApiService.createPoint(point);
+    this.#points = [createdPoint, ...this.#points];
+    this._notify(updateType, createdPoint);
   }
 
-  deletePoint(updateType, point) {
-    const index = this.#points.findIndex((p) => p.id === point.id);
+  async deletePoint(updateType, point) {
+    await this.#pointsApiService.deletePoint(point);
 
+    const index = this.#points.findIndex((p) => p.id === point.id);
     if (index === -1) {
       throw new Error('Point not found');
     }

@@ -14,8 +14,10 @@ function createFormCreateTemplate(point, destinations) {
     basePrice = 0,
     dateFrom = dayjs(),
     dateTo = dayjs(),
-    offers = []
+    offers = [],
+    isSaving = false,
   } = point;
+  const isDisabled = isSaving;
 
   const { description: destDescription, pictures = [] } = destination;
 
@@ -64,7 +66,8 @@ function createFormCreateTemplate(point, destinations) {
             type="text"
             name="event-destination"
             value="${he.encode(destination.name)}"
-            list="destination-list-1" required
+            list="destination-list-1"
+            ${isDisabled ? 'disabled' : ''}
           >
 
           <datalist id="destination-list-1">
@@ -82,6 +85,7 @@ function createFormCreateTemplate(point, destinations) {
             type="text"
             name="event-start-time"
             value="${formattedDateFrom}"
+            ${isDisabled ? 'disabled' : ''}
           >
           &mdash;
           <label class="visually-hidden" for="event-end-time-1">To</label>
@@ -91,6 +95,7 @@ function createFormCreateTemplate(point, destinations) {
             type="text"
             name="event-end-time"
             value="${formattedDateTo}"
+            ${isDisabled ? 'disabled' : ''}
           >
         </div>
 
@@ -107,11 +112,12 @@ function createFormCreateTemplate(point, destinations) {
             type="number"
             min="0"
             required
+            ${isDisabled ? 'disabled' : ''}
           >
         </div>
 
-        <button class="event__save-btn btn btn--blue" type="submit">Save</button>
-        <button class="event__reset-btn" type="reset">Cancel</button>
+        <button class="event__save-btn btn btn--blue" type="submit" ${isDisabled ? 'disabled' : ''}>${isSaving ? 'Saving...' : 'Save'}</button>
+        <button class="event__reset-btn" type="reset" ${isDisabled ? 'disabled' : ''}>Cancel</button>
       </header>
 
       <section class="event__details">
@@ -170,9 +176,13 @@ export default class CreateForm extends AbstractStatefulView {
       ? offersForType.offers.map((offer) => ({ ...offer, selected: false }))
       : [];
 
-    this._setState(initialState);
+    this._setState({ ...initialState, isSaving: false });
 
     this._restoreHandlers();
+  }
+
+  setSaving(value) {
+    this.updateElement({ isSaving: value });
   }
 
   get template() {
@@ -213,7 +223,7 @@ export default class CreateForm extends AbstractStatefulView {
 
   #priceInputHandler = (evt) => {
     evt.preventDefault();
-    this.updateElement({
+    this._setState({
       basePrice: evt.target.value,
     });
   };
@@ -322,14 +332,17 @@ export default class CreateForm extends AbstractStatefulView {
     );
 
     if (!selectedDestination) {
+      this.shake();
       return;
     }
 
     const dateFromObj = dayjs(this._state.dateFrom);
     let dateToObj = dayjs(this._state.dateTo);
+
     const price = Number(this._state.basePrice);
 
-    if (!price && price !== 0) {
+    if (price <= 0 || price > 100000) {
+      this.shake();
       return;
     }
 
