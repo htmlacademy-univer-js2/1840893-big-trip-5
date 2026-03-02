@@ -265,7 +265,7 @@ export default class EditForm extends AbstractStatefulView {
 
   #priceInputHandler = (evt) => {
     evt.preventDefault();
-    this.updateElement({
+    this._setState({
       basePrice: evt.target.value,
     });
   };
@@ -285,14 +285,18 @@ export default class EditForm extends AbstractStatefulView {
     );
 
     if (!selectedDestination) {
+      this.shake();
       return;
     }
 
     const dateFromObj = dayjs(this._state.dateFrom);
     let dateToObj = dayjs(this._state.dateTo);
-    const price = Number(this._state.basePrice);
 
-    if (!price && price !== 0) {
+    const priceInput = this.element.querySelector('#event-price-1');
+    const price = Number(priceInput ? priceInput.value : this._state.basePrice);
+
+    if (price <= 0 || price > 100000) {
+      this.shake();
       return;
     }
 

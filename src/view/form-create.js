@@ -228,7 +228,7 @@ export default class CreateForm extends AbstractStatefulView {
 
   #priceInputHandler = (evt) => {
     evt.preventDefault();
-    this.updateElement({
+    this._setState({
       basePrice: evt.target.value,
     });
   };
@@ -337,14 +337,17 @@ export default class CreateForm extends AbstractStatefulView {
     );
 
     if (!selectedDestination) {
+      this.shake();
       return;
     }
 
     const dateFromObj = dayjs(this._state.dateFrom);
     let dateToObj = dayjs(this._state.dateTo);
+
     const price = Number(this._state.basePrice);
 
-    if (!price && price !== 0) {
+    if (price <= 0 || price > 100000) {
+      this.shake();
       return;
     }
 

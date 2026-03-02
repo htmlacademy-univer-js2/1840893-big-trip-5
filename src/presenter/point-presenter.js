@@ -87,6 +87,7 @@ export default class PointPresenter {
       this.#boardItem = null;
     }
 
+    this.#isEditing = false;
     this.#pointComponent = null;
     this.#editFormComponent = null;
 
@@ -118,20 +119,11 @@ export default class PointPresenter {
     });
 
     if (this.#isEditing) {
-      this.#editFormComponent = new EditForm({
-        point: pointWithOffers,
-        onCloseButtonClick: this.#replaceEditToPoint,
-        onSubmitButtonClick: this.#handleFormSubmit,
-        onDeleteButtonClick: this.#handleDeleteClick,
-        destinations: this.#destinationsModel.destinations,
-        offersByType: this.#offersModel.offers,
-      });
-      replace(this.#editFormComponent, this.#pointComponent);
+      this.#pointComponent = newPointComponent;
     } else {
       replace(newPointComponent, this.#pointComponent);
+      this.#pointComponent = newPointComponent;
     }
-
-    this.#pointComponent = newPointComponent;
   }
 
   resetView() {
@@ -162,7 +154,9 @@ export default class PointPresenter {
     } catch {
       this.#editFormComponent?.shake();
     } finally {
-      this.#editFormComponent?.setDeleting(false);
+      if (this.#isEditing) {
+        this.#editFormComponent.setDeleting(false);
+      }
       this.#uiBlocker.unblock();
     }
   };
@@ -172,11 +166,14 @@ export default class PointPresenter {
     this.#editFormComponent.setSaving(true);
     try {
       await this.#onDataChange(USER_ACTION.UPDATE_POINT, updatedPoint);
+      this.#editFormComponent.setSaving(false);
       this.#replaceEditToPoint();
     } catch {
-      this.#editFormComponent?.shake();
+      this.#editFormComponent.shake();
     } finally {
-      this.#editFormComponent?.setSaving(false);
+      if (this.#isEditing) {
+        this.#editFormComponent.setSaving(false);
+      }
       this.#uiBlocker.unblock();
     }
   };
