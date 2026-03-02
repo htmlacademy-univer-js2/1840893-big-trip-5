@@ -141,6 +141,8 @@ export default class PointPresenter {
     this.#uiBlocker.block();
     try {
       await this.#onDataChange(USER_ACTION.UPDATE_POINT, updatedPoint);
+    } catch {
+      this.#pointComponent.shake();
     } finally {
       this.#uiBlocker.unblock();
     }
@@ -152,11 +154,11 @@ export default class PointPresenter {
     try {
       await this.#onDataChange(USER_ACTION.DELETE_POINT, this.#point);
     } catch {
-      this.#editFormComponent?.shake();
+      this.#editFormComponent?.shake(() => {
+        this.#editFormComponent?.setDeleting(false);
+      });
+      return;
     } finally {
-      if (this.#isEditing) {
-        this.#editFormComponent.setDeleting(false);
-      }
       this.#uiBlocker.unblock();
     }
   };
@@ -169,11 +171,11 @@ export default class PointPresenter {
       this.#editFormComponent.setSaving(false);
       this.#replaceEditToPoint();
     } catch {
-      this.#editFormComponent.shake();
+      this.#editFormComponent?.shake(() => {
+        this.#editFormComponent?.setSaving(false);
+      });
+      return;
     } finally {
-      if (this.#isEditing) {
-        this.#editFormComponent.setSaving(false);
-      }
       this.#uiBlocker.unblock();
     }
   };

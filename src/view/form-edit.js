@@ -120,11 +120,6 @@ export default class EditForm extends AbstractStatefulView {
     this.updateElement({ isDeleting: value });
   }
 
-  shake() {
-    this.element.classList.add('shake');
-    setTimeout(() => this.element.classList.remove('shake'), 600);
-  }
-
   get template() {
     return createFormEditTemplate(this._state, this.#destinations);
   }

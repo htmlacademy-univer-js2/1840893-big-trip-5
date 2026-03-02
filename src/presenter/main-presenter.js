@@ -100,11 +100,14 @@ export default class MainPresenter {
       await this.#pointsModel.addPoint(UPDATE_TYPE.MINOR, point);
       this.closeCreateForm();
     } catch {
-      this.#createFormComponent.shake();
-    } finally {
       if (this.#createFormComponent) {
-        this.#createFormComponent.setSaving(false);
+        this.#createFormComponent.shake(() => {
+          this.#createFormComponent?.setSaving(false);
+        });
       }
+      this.#uiBlocker.unblock();
+      return;
+    } finally {
       this.#uiBlocker.unblock();
     }
   };
